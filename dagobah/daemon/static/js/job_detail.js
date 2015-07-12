@@ -517,6 +517,11 @@ function updateSchedule(jobName, cronSchedule) {
         return;
     }
 
+    if (cronSchedule == 'None') {
+        alert("cron schedule can't be None val, please be set with format like this: $minute $hour $day $month $weekday");
+        return false;
+    }
+
     $.ajax({
         type: 'POST',
         url: $SCRIPT_ROOT + '/api/schedule_job',
@@ -540,6 +545,10 @@ function updateSchedule(jobName, cronSchedule) {
 }
 
 $('#save-schedule').click(function() {
+  if (job.tasks.length == 0) {
+    alert("yet not any task has been added in this job, please at least add one first");
+    return false;
+  }
   updateSchedule(job.name, $('#cron-schedule').val());
 });
 
