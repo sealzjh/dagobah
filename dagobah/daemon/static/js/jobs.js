@@ -15,6 +15,7 @@ $('#add-job').click(function() {
     var newName = $('#new-job-name').val();
     if (newName === null || newName === '') {
         showAlert('new-alert', 'error', 'Please enter a name for the new job.');
+        return false;
     }
     $('#new-job-name').val('');
     addNewJob(newName);
@@ -25,9 +26,12 @@ $('#import-job').click(function() {
 });
 
 function onJobDeleteClick() {
-    $(this).parents('[data-job]').each(function() {
-        deleteJob($(this).attr('data-job'));
-    });
+    var delete_jobname = $(this).parents('[data-job]')[0].children[0].innerText;
+    if (confirm("Sure to delete this job named '" + delete_jobname + "' ? ") == true) {
+        $(this).parents('[data-job]').each(function() {
+            deleteJob($(this).attr('data-job'));
+        });
+    }
 }
 
 function onEditJobClick() {
