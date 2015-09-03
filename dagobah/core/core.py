@@ -71,9 +71,11 @@ class Dagobah(object):
         """ Reconstruct this Dagobah instance from the backend. """
         logger.debug('Reconstructing Dagobah instance from backend with ID {0}'.format(dagobah_id))
         rec = self.backend.get_dagobah_json(dagobah_id)
+        print rec
         if not rec:
             raise DagobahError('dagobah with id %s does not exist '
                                'in backend' % dagobah_id)
+        print 3333333333333
         self._construct_from_json(rec)
 
 
@@ -122,6 +124,8 @@ class Dagobah(object):
                                  str(task['name']),
                                  soft_timeout=task.get('soft_timeout', 0),
                                  hard_timeout=task.get('hard_timeout', 0),
+                                 stdout_file=task.get('stdout_file', None),
+                                 stderr_file=task.get('stderr_file', None),
                                  hostname=task.get('hostname', None))
 
         dependencies = job_json.get('dependencies', {})
@@ -150,6 +154,7 @@ class Dagobah(object):
         logger.debug('Deleting Dagobah instance with ID {0}'.format(self.dagobah_id))
         self.jobs = []
         self.created_jobs = 0
+        print self.dagobah_id
         self.backend.delete_dagobah(self.dagobah_id)
 
 
@@ -234,6 +239,9 @@ class Dagobah(object):
                         **kwargs):
         """ Add a task to a job owned by the Dagobah instance. """
 
+        print 1111111111111
+        print job_or_job_name
+        print 1111111111111
         if isinstance(job_or_job_name, Job):
             job = job_or_job_name
         else:
@@ -720,7 +728,7 @@ class Task(object):
     """
 
     def __init__(self, parent_job, command, name,
-                 soft_timeout=0, hard_timeout=0, hostname=None):
+                 soft_timeout=0, hard_timeout=0, hostname=None, stdout_file=None, stderr_file=None):
         logger.debug('Starting Task instance constructor with name {0}'.format(name))
         self.parent_job = parent_job
         self.backend = self.parent_job.backend
@@ -733,8 +741,8 @@ class Task(object):
         self.process = None
         self.stdout = ""
         self.stderr = ""
-        self.stdout_file = None
-        self.stderr_file = None
+        self.stdout_file = stdout_file
+        self.stderr_file = stderr_file
 
         self.timer = None
 
@@ -776,8 +784,8 @@ class Task(object):
 
         logger.debug('Resetting task {0}'.format(self.name))
 
-        self.stdout_file = os.tmpfile()
-        self.stderr_file = os.tmpfile()
+        # self.stdout_file = os.tmpfile()
+        # self.stderr_file = os.tmpfile()
 
         self.stdout = ""
         self.stderr = ""
@@ -804,8 +812,10 @@ class Task(object):
             self.process = subprocess.Popen(self.command,
                                             shell=True,
                                             env=os.environ.copy(),
-                                            stdout=self.stdout_file,
-                                            stderr=self.stderr_file)
+                                            # stdout=self.stdout_file,
+                                            # stderr=self.stderr_file)
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE)
 
         self.started_at = datetime.now()
         self._start_check_timer()
@@ -860,8 +870,8 @@ class Task(object):
             return_code = -1
             self.stderr += '\nAn error occurred with the remote machine.\n'
 
-        self.stdout_file = None
-        self.stderr_file = None
+        # self.stdout_file = None
+        # self.stderr_file = None
 
         self._task_complete(success=True if return_code == 0 else False,
                             return_code=return_code,
@@ -904,10 +914,12 @@ class Task(object):
             return self.remote_channel.recv_exit_status()
         # Otherwise check for finished local command
         elif self.process:
-            self.stdout, self.stderr = (self._read_temp_file(self.stdout_file),
-                                        self._read_temp_file(self.stderr_file))
-            for temp_file in [self.stdout_file, self.stderr_file]:
-                temp_file.close()
+            print self.process
+            print self.process.__dict__
+            self.stdout, self.stderr = (self._read_given_file(self.stdout_file),
+                                        self._read_given_file(self.stderr_file))
+            # for temp_file in [self.stdout_file, self.stderr_file]:
+            #     temp_file.close()
             return self.process.returncode
 
     def terminate(self):
@@ -947,21 +959,31 @@ class Task(object):
             return self._head_string(last_run['tasks'][self.name][stream],
                                      num_lines)
         else:
-            return self._head_temp_file(target, num_lines)
+            return self._head_given_file(target, num_lines)
 
 
     def tail(self, stream='stdout', num_lines=10):
         """ Tail a specified stream (stdout or stderr) by num_lines. """
         target = self._map_string_to_file(stream)
+        print 33333
+        print target
+        print 33333
         if not target:  # no current temp file
             last_run = self.backend.get_latest_run_log(self.parent_job.job_id,
                                                        self.name)
+            print 44444
+            print self.parent_job.job_id, self.name
+            print last_run
+            print 44444
+            print 55555
+            print self.command
+            print 55555
             if not last_run:
                 return None
             return self._tail_string(last_run['tasks'][self.name][stream],
                                      num_lines)
         else:
-            return self._tail_temp_file(target, num_lines)
+            return self._tail_given_file(target, num_lines)
 
 
     def get_stdout(self):
@@ -1009,6 +1031,15 @@ class Task(object):
         self.timer.daemon = True
         self.timer.start()
 
+    def _read_given_file(self, given_file):
+        """ Reads a given file for open stdout and stderr. """
+        f = open(given_file)
+        f.seek(0)
+        result = f.read()
+        f.close()
+        # temp_file.seek(0)
+        # result = temp_file.read()
+        return result
 
     def _read_temp_file(self, temp_file):
         """ Reads a temporary file for Popen stdout and stderr. """
@@ -1026,6 +1057,20 @@ class Task(object):
         """ Returns a list of the last num_lines lines from a string. """
         return in_str.split('\n')[-1 * num_lines :]
 
+    def _head_given_file(self, given_file, num_lines):
+        """ Returns a list of the first num_lines lines from a given file. """
+        if not isinstance(num_lines, int):
+            raise DagobahError('num_lines must be an integer')
+        f = open(given_file)
+        f.seek(0)
+        result, curr_line = [], 0
+        for line in f:
+            curr_line += 1
+            result.append(line.strip())
+            if curr_line >= num_lines:
+                break
+        return result
+
 
     def _head_temp_file(self, temp_file, num_lines):
         """ Returns a list of the first num_lines lines from a temp file. """
@@ -1038,6 +1083,33 @@ class Task(object):
             result.append(line.strip())
             if curr_line >= num_lines:
                 break
+        return result
+
+    def _tail_given_file(self, given_file, num_lines, seek_offset=10000):
+        """ Returns a list of the last num_lines lines from a given file.
+
+        This works by first moving seek_offset chars back from the end of
+        the file, then attempting to tail the file from there. It is
+        possible that fewer than num_lines will be returned, even if the
+        file has more total lines than num_lines.
+        """
+
+        if not isinstance(num_lines, int):
+            raise DagobahError('num_lines must be an integer')
+
+        f = open(given_file)
+        f.seek(0, os.SEEK_END)
+        size = f.tell()
+        f.seek(-1 * min(size, seek_offset), os.SEEK_END)
+
+        result = []
+        while True:
+            this_line = f.readline()
+            if this_line == '':
+                break
+            result.append(this_line.strip())
+            if len(result) > num_lines:
+                result.pop(0)
         return result
 
 
@@ -1085,6 +1157,8 @@ class Task(object):
                   'started_at': self.started_at,
                   'completed_at': self.completed_at,
                   'success': self.successful,
+                  'stdout_file': self.stdout_file,
+                  'stderr_file': self.stderr_file,
                   'soft_timeout': self.soft_timeout,
                   'hard_timeout': self.hard_timeout,
                   'hostname': self.hostname}

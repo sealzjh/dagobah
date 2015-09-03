@@ -248,6 +248,9 @@ $('#add-task').click(function() {
 
     var newName = $('#new-task-name').val();
     var newCommand = $('#new-task-command').val();
+    var stdout = $('#new-task-stdout').val();
+    var stderr = $('#new-task-stderr').val();
+
     if ($('#remote_checkbox').is(':checked')){
         var newTargetHostId = $('#target-hosts-dropdown').val();
     }
@@ -260,30 +263,34 @@ $('#add-task').click(function() {
         showAlert('new-alert', 'error', 'Please enter a command for the new task.');
         return;
     }
+    if (stdout === null || stdout === '') {
+        showAlert('new-alert', 'error', 'Please enter a stdout for the new task.');
+        return;
+    }
+    if (stderr === null || stderr === '') {
+        stderr = stdout;
+    }
 
-    addNewTask(newName, newCommand, newTargetHostId);
+    addNewTask(newName, newCommand, newTargetHostId, stdout, stderr);
 
 });
 
-function addNewTask(newName, newCommand, newTargetHostId) {
+function addNewTask(newName, newCommand, newTargetHostId, stdout, stderr) {
 
     if (!job.loaded) {
         return;
     }
 
+	data = {
+        job_name: job.name,
+        task_name: newName,
+        task_command: newCommand,
+        task_stdout: stdout,
+        task_stderr: stderr,
+	};
+
     if (newTargetHostId) {
-        data = {
-            job_name: job.name,
-            task_name: newName,
-            task_command: newCommand,
-            task_target: newTargetHostId
-        };
-    } else {
-        data = {
-            job_name: job.name,
-            task_name: newName,
-            task_command: newCommand
-        };
+        data[task_target] = newTargetHostId
     }
 
     $.ajax({
@@ -300,6 +307,8 @@ function addNewTask(newName, newCommand, newTargetHostId) {
             $('#new-task-name').val('');
             $('#new-task-command').val('');
             $('#target-hosts-dropdown').val('');
+            $('#new-task-stdout').val('');
+            $('#new-task-stderr').val('');
         },
         error: function() {
             showAlert('new-alert', 'error', 'There was an error adding the task to this job.');
@@ -352,6 +361,7 @@ function resetTasksTable(tableMode) {
                 })
             );
         } else if (tableMode === 'commands') {
+			console.log(thisTask);
             $('#tasks-body').append(
                     tasksTableCommandsTemplate({
                     taskName: thisTask.name,
