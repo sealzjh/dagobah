@@ -32,7 +32,7 @@ def get_job():
     if not job:
         abort(400)
 
-    return job._serialize()
+    return job._serialize(command_loose=True)
 
 
 @app.route('/api/logs', methods=['GET'])
@@ -111,7 +111,17 @@ def tail_task():
         abort(400)
 
     job = dagobah.get_job(args['job_name'])
+    print 11111
+    print args['job_name']
+    print dagobah
+    print job
+    print job.__dict__
+    print 11111
     task = job.tasks.get(args['task_name'], None)
+    print 22222
+    print task
+    print task.__dict__
+    print 22222
     if not task:
         abort(400)
 
@@ -182,16 +192,20 @@ def retry_job():
 def add_task_to_job():
     args = dict(request.form)
     if not validate_dict(args,
-                         required=['job_name', 'task_command', 'task_name'],
+                         required=['job_name', 'task_command', 'task_name', 'task_stdout', 'task_stderr'],
                          job_name=str,
                          task_command=str,
                          task_name=str,
+                         task_stdout=str,
+                         task_stderr=str,
                          task_target=str):
         abort(400)
 
     dagobah.add_task_to_job(args['job_name'],
-                            args['task_command'],
+                            "%s 1>> %s 2>> %s" % (args['task_command'], args['task_stdout'], args['task_stderr']),
                             args['task_name'],
+                            stdout_file=args['task_stdout'],
+                            stderr_file=args['task_stderr'],
                             hostname=args.get("task_target", None))
 
 
@@ -383,6 +397,8 @@ def edit_task():
                          task_name=str,
                          name=str,
                          command=str,
+                         stdout_file=str,
+                         stderr_file=str,
                          soft_timeout=int,
                          hard_timeout=int,
                          hostname=str):

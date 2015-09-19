@@ -25,7 +25,7 @@
         <span data-attr='success' data-transform='class-success'></span>
       </td>
       <td>
-        <button class='btn btn-primary' onclick="window.location.href = '{{ taskURL }}';">View Task</button>
+        <button class='btn btn-primary' onclick="window.location.href = '{{ taskURL }}';">Task Logs</button>
         <button class='btn btn-danger task-delete' onclick="return false;"><i class='icon-trash'></i>
       </td>
     </tr>
@@ -35,8 +35,10 @@
     <tr data-task='{{ taskName }}'>
       {{> tasksName }}
       {{> tasksCommand }}
+      {{> tasksStdout }}
+      {{> tasksStderr }}
       <td>
-        <button class='btn btn-primary' onclick="window.location.href = '{{ taskURL }}';">View Task</button>
+        <button class='btn btn-primary' onclick="window.location.href = '{{ taskURL }}';">Task Logs</button>
         <button class='btn btn-danger task-delete' onclick="return false;"><i class='icon-trash'></i>
       </td>
     </tr>
@@ -48,7 +50,7 @@
       {{> tasksSoftTimeout }}
       {{> tasksHardTimeout }}
       <td>
-        <button class='btn btn-primary' onclick="window.location.href = '{{ taskURL }}';">View Task</button>
+        <button class='btn btn-primary' onclick="window.location.href = '{{ taskURL }}';">Task Logs</button>
         <button class='btn btn-danger task-delete' onclick="return false;"><i class='icon-trash'></i>
       </td>
     </tr>
@@ -59,7 +61,7 @@
       {{> tasksName }}
       {{> tasksRemoteTarget }}
       <td>
-        <button class='btn btn-primary' onclick="window.location.href = '{{ taskURL }}';">View Task</button>
+        <button class='btn btn-primary' onclick="window.location.href = '{{ taskURL }}';">Task Logs</button>
         <button class='btn btn-danger task-delete' onclick="return false;"><i class='icon-trash'></i>
       </td>
     </tr>
@@ -74,6 +76,20 @@
 
   <script id="tasks-data-command-template" type="text/x-handlebars-template">
     <td data-attr='command'>
+      {{#if text}}{{text}}{{/if}}
+      <i class='icon-pencil edit-task'></i>
+    </td>
+  </script>
+
+  <script id="tasks-data-stdout-template" type="text/x-handlebars-template">
+    <td data-attr='stdout_file'>
+      {{#if text}}{{text}}{{/if}}
+      <i class='icon-pencil edit-task'></i>
+    </td>
+  </script>
+
+  <script id="tasks-data-stderr-template" type="text/x-handlebars-template">
+    <td data-attr='stderr_file'>
       {{#if text}}{{text}}{{/if}}
       <i class='icon-pencil edit-task'></i>
     </td>
@@ -245,6 +261,12 @@
 
   <label>Command</label>
   <textarea id='new-task-command' rows="3" placeholder='Task Command'></textarea>
+
+  <label>Stdout</label>
+  <input id='new-task-stdout' class='input-xxlarge' type='text' placeholder='Task Stdout'></input>
+
+  <label>Stderr ( can be none and use Stdout as default ) </label>
+  <input id='new-task-stderr' class='input-xxlarge' type='text' placeholder='Task Stderr'></input>
 
   <br />
   <button id='add-task' class='btn btn-success' onclick='return false;'>Add Task</button>
