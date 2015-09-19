@@ -32,7 +32,7 @@ def get_job():
     if not job:
         abort(400)
 
-    return job._serialize()
+    return job._serialize(command_loose=True)
 
 
 @app.route('/api/logs', methods=['GET'])
@@ -397,6 +397,8 @@ def edit_task():
                          task_name=str,
                          name=str,
                          command=str,
+                         stdout_file=str,
+                         stderr_file=str,
                          soft_timeout=int,
                          hard_timeout=int,
                          hostname=str):

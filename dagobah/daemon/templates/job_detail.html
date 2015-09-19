@@ -35,6 +35,8 @@
     <tr data-task='{{ taskName }}'>
       {{> tasksName }}
       {{> tasksCommand }}
+      {{> tasksStdout }}
+      {{> tasksStderr }}
       <td>
         <button class='btn btn-primary' onclick="window.location.href = '{{ taskURL }}';">Task Logs</button>
         <button class='btn btn-danger task-delete' onclick="return false;"><i class='icon-trash'></i>
@@ -74,6 +76,20 @@
 
   <script id="tasks-data-command-template" type="text/x-handlebars-template">
     <td data-attr='command'>
+      {{#if text}}{{text}}{{/if}}
+      <i class='icon-pencil edit-task'></i>
+    </td>
+  </script>
+
+  <script id="tasks-data-stdout-template" type="text/x-handlebars-template">
+    <td data-attr='stdout_file'>
+      {{#if text}}{{text}}{{/if}}
+      <i class='icon-pencil edit-task'></i>
+    </td>
+  </script>
+
+  <script id="tasks-data-stderr-template" type="text/x-handlebars-template">
+    <td data-attr='stderr_file'>
       {{#if text}}{{text}}{{/if}}
       <i class='icon-pencil edit-task'></i>
     </td>

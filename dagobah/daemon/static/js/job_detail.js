@@ -7,12 +7,16 @@ var editTaskTemplate = Handlebars.compile($('#tasks-edit-template').html());
 
 var tasksNameTemplate = Handlebars.compile($('#tasks-data-name-template').html());
 var tasksCommandTemplate = Handlebars.compile($('#tasks-data-command-template').html());
+var tasksStdoutTemplate = Handlebars.compile($('#tasks-data-stdout-template').html());
+var tasksStderrTemplate = Handlebars.compile($('#tasks-data-stderr-template').html());
 var tasksSoftTimeoutTemplate = Handlebars.compile($('#tasks-data-soft-timeout-template').html());
 var tasksHardTimeoutTemplate = Handlebars.compile($('#tasks-data-hard-timeout-template').html());
 var tasksRemoteTargetTemplate = Handlebars.compile($('#tasks-data-remote-target-template').html());
 
 Handlebars.registerPartial('tasksName', tasksNameTemplate);
 Handlebars.registerPartial('tasksCommand', tasksCommandTemplate);
+Handlebars.registerPartial('tasksStdout', tasksStdoutTemplate);
+Handlebars.registerPartial('tasksStderr', tasksStderrTemplate);
 Handlebars.registerPartial('tasksSoftTimeout', tasksSoftTimeoutTemplate);
 Handlebars.registerPartial('tasksHardTimeout', tasksHardTimeoutTemplate);
 Handlebars.registerPartial('tasksRemoteTarget', tasksRemoteTargetTemplate);
@@ -30,6 +34,8 @@ Handlebars.registerHelper('equal', function(lvalue, rvalue, options) {
 var fieldMap = {
     "Task": 'name',
     "Command": 'command',
+    "Stdout": 'stdout_file',
+    "Stderr": 'stderr_file',
     "Soft Timeout": 'soft_timeout',
     "Hard Timeout": 'hard_timeout',
     "Remote Target": 'hostname'
@@ -38,6 +44,8 @@ var fieldMap = {
 var fieldTemplateMap = {
     "Task": tasksNameTemplate,
     "Command": tasksCommandTemplate,
+    "Stdout": tasksStdoutTemplate,
+    "Stderr": tasksStderrTemplate,
     "Soft Timeout": tasksSoftTimeoutTemplate,
     "Hard Timeout": tasksHardTimeoutTemplate,
     "Remote Target": tasksRemoteTargetTemplate
@@ -335,7 +343,7 @@ function resetTasksTable(tableMode) {
     if (tableMode === 'results') {
         headers = ['Task', 'Started', 'Completed', 'Result', ''];
     } else if (tableMode === 'commands') {
-        headers = ['Task', 'Command', ''];
+        headers = ['Task', 'Command', 'Stdout', 'Stderr', ''];
     } else if (tableMode === 'timeouts') {
         headers = ['Task', 'Soft Timeout', 'Hard Timeout', ''];
     } else if (tableMode === 'remote') {

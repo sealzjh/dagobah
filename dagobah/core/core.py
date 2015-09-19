@@ -536,7 +536,15 @@ class Job(DAG):
         task = self.tasks[task_name]
         for key in ['name', 'command']:
             if key in kwargs and isinstance(kwargs[key], str):
+                if key == 'command' :
+                    kwargs[key] = "%s 1>> %s 2>> %s" % (kwargs[key], task.stdout_file, task.stderr_file)
                 setattr(task, key, kwargs[key])
+
+        if 'stdout_file' in kwargs:
+            task.set_stdout_file(kwargs['stdout_file'])
+
+        if 'stderr_file' in kwargs:
+            task.set_stderr_file(kwargs['stderr_file'])
 
         if 'soft_timeout' in kwargs:
             task.set_soft_timeout(kwargs['soft_timeout'])
@@ -666,18 +674,20 @@ class Job(DAG):
         self.backend.commit_log(self.run_log)
 
 
-    def _serialize(self, include_run_logs=False, strict_json=False):
+    def _serialize(self, include_run_logs=False, strict_json=False, command_loose=False):
         """ Serialize a representation of this Job to a Python dict object. """
 
         # return tasks in sorted order if graph is in a valid state
         try:
             topo_sorted = self.topological_sort()
             t = [self.tasks[task]._serialize(include_run_logs=include_run_logs,
-                                             strict_json=strict_json)
+                                             strict_json=strict_json,
+                                             command_loose=command_loose)
                  for task in topo_sorted]
         except:
             t = [task._serialize(include_run_logs=include_run_logs,
-                                 strict_json=strict_json)
+                                 strict_json=strict_json,
+                                 command_loose=command_loose)
                  for task in self.tasks.itervalues()]
 
         dependencies = {}
@@ -757,6 +767,16 @@ class Task(object):
         self.set_soft_timeout(soft_timeout)
         self.set_hard_timeout(hard_timeout)
 
+        self.parent_job.commit()
+
+    def set_stdout_file(self, stdout_file):
+        logger.debug('Task {0} setting stdout file'.format(self.name))
+        self.stdout_file = stdout_file
+        self.parent_job.commit()
+
+    def set_stderr_file(self, stderr_file):
+        logger.debug('Task {0} setting stderr file'.format(self.name))
+        self.stderr_file = stderr_file
         self.parent_job.commit()
 
     def set_soft_timeout(self, timeout):
@@ -1149,10 +1169,17 @@ class Task(object):
             self.parent_job._complete_task(self.name, **kwargs)
 
 
-    def _serialize(self, include_run_logs=False, strict_json=False):
+    def _serialize(self, include_run_logs=False, strict_json=False, command_loose=False):
         """ Serialize a representation of this Task to a Python dict. """
 
-        result = {'command': self.command,
+        command_to_show = self.command
+        if command_loose :
+            import re
+            match_expr = re.match(r'(.*) (1>> .*) (2>> .*)', self.command)
+            if match_expr is not None :
+                command_to_show = match_expr.group(1)
+
+        result = {'command': command_to_show,
                   'name': self.name,
                   'started_at': self.started_at,
                   'completed_at': self.completed_at,
