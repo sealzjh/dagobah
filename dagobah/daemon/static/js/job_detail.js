@@ -7,12 +7,16 @@ var editTaskTemplate = Handlebars.compile($('#tasks-edit-template').html());
 
 var tasksNameTemplate = Handlebars.compile($('#tasks-data-name-template').html());
 var tasksCommandTemplate = Handlebars.compile($('#tasks-data-command-template').html());
+var tasksStdoutTemplate = Handlebars.compile($('#tasks-data-stdout-template').html());
+var tasksStderrTemplate = Handlebars.compile($('#tasks-data-stderr-template').html());
 var tasksSoftTimeoutTemplate = Handlebars.compile($('#tasks-data-soft-timeout-template').html());
 var tasksHardTimeoutTemplate = Handlebars.compile($('#tasks-data-hard-timeout-template').html());
 var tasksRemoteTargetTemplate = Handlebars.compile($('#tasks-data-remote-target-template').html());
 
 Handlebars.registerPartial('tasksName', tasksNameTemplate);
 Handlebars.registerPartial('tasksCommand', tasksCommandTemplate);
+Handlebars.registerPartial('tasksStdout', tasksStdoutTemplate);
+Handlebars.registerPartial('tasksStderr', tasksStderrTemplate);
 Handlebars.registerPartial('tasksSoftTimeout', tasksSoftTimeoutTemplate);
 Handlebars.registerPartial('tasksHardTimeout', tasksHardTimeoutTemplate);
 Handlebars.registerPartial('tasksRemoteTarget', tasksRemoteTargetTemplate);
@@ -30,6 +34,8 @@ Handlebars.registerHelper('equal', function(lvalue, rvalue, options) {
 var fieldMap = {
     "Task": 'name',
     "Command": 'command',
+    "Stdout": 'stdout_file',
+    "Stderr": 'stderr_file',
     "Soft Timeout": 'soft_timeout',
     "Hard Timeout": 'hard_timeout',
     "Remote Target": 'hostname'
@@ -38,6 +44,8 @@ var fieldMap = {
 var fieldTemplateMap = {
     "Task": tasksNameTemplate,
     "Command": tasksCommandTemplate,
+    "Stdout": tasksStdoutTemplate,
+    "Stderr": tasksStderrTemplate,
     "Soft Timeout": tasksSoftTimeoutTemplate,
     "Hard Timeout": tasksHardTimeoutTemplate,
     "Remote Target": tasksRemoteTargetTemplate
@@ -248,6 +256,9 @@ $('#add-task').click(function() {
 
     var newName = $('#new-task-name').val();
     var newCommand = $('#new-task-command').val();
+    var stdout = $('#new-task-stdout').val();
+    var stderr = $('#new-task-stderr').val();
+
     if ($('#remote_checkbox').is(':checked')){
         var newTargetHostId = $('#target-hosts-dropdown').val();
     }
@@ -260,30 +271,34 @@ $('#add-task').click(function() {
         showAlert('new-alert', 'error', 'Please enter a command for the new task.');
         return;
     }
+    if (stdout === null || stdout === '') {
+        showAlert('new-alert', 'error', 'Please enter a stdout for the new task.');
+        return;
+    }
+    if (stderr === null || stderr === '') {
+        stderr = stdout;
+    }
 
-    addNewTask(newName, newCommand, newTargetHostId);
+    addNewTask(newName, newCommand, newTargetHostId, stdout, stderr);
 
 });
 
-function addNewTask(newName, newCommand, newTargetHostId) {
+function addNewTask(newName, newCommand, newTargetHostId, stdout, stderr) {
 
     if (!job.loaded) {
         return;
     }
 
+	data = {
+        job_name: job.name,
+        task_name: newName,
+        task_command: newCommand,
+        task_stdout: stdout,
+        task_stderr: stderr,
+	};
+
     if (newTargetHostId) {
-        data = {
-            job_name: job.name,
-            task_name: newName,
-            task_command: newCommand,
-            task_target: newTargetHostId
-        };
-    } else {
-        data = {
-            job_name: job.name,
-            task_name: newName,
-            task_command: newCommand
-        };
+        data[task_target] = newTargetHostId
     }
 
     $.ajax({
@@ -300,6 +315,8 @@ function addNewTask(newName, newCommand, newTargetHostId) {
             $('#new-task-name').val('');
             $('#new-task-command').val('');
             $('#target-hosts-dropdown').val('');
+            $('#new-task-stdout').val('');
+            $('#new-task-stderr').val('');
         },
         error: function() {
             showAlert('new-alert', 'error', 'There was an error adding the task to this job.');
@@ -326,7 +343,7 @@ function resetTasksTable(tableMode) {
     if (tableMode === 'results') {
         headers = ['Task', 'Started', 'Completed', 'Result', ''];
     } else if (tableMode === 'commands') {
-        headers = ['Task', 'Command', ''];
+        headers = ['Task', 'Command', 'Stdout', 'Stderr', ''];
     } else if (tableMode === 'timeouts') {
         headers = ['Task', 'Soft Timeout', 'Hard Timeout', ''];
     } else if (tableMode === 'remote') {
@@ -352,6 +369,7 @@ function resetTasksTable(tableMode) {
                 })
             );
         } else if (tableMode === 'commands') {
+			console.log(thisTask);
             $('#tasks-body').append(
                     tasksTableCommandsTemplate({
                     taskName: thisTask.name,
